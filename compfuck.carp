@@ -1,0 +1,51 @@
+(defndynamic search-matching-bracket [s m]
+  (if (= (String.length s) 0)
+    0
+    (if (= m 0)
+      0
+      (let [f (String.char-at s 0)]
+        (if (= \] f)
+          (+ 1 (search-matching-bracket (String.substring s 1 (String.length s)) (- m 1)))
+          (+ 1 (search-matching-bracket (String.substring s 1 (String.length s)) m)))))))
+
+(defndynamic compile-compf-char [c s i]
+  (if (= \+ f)
+    (list 1 '(Array.aupdate! &t h &(fn [x] (mod (Int.inc @x) 255))))
+    (if (= \- f)
+      (list 1 '(Array.aupdate! &t h &(fn [x] (max 0 (Int.dec @x)))))
+      (if (= \> f)
+        (list 1 '(set! h (+ h 1)))
+        (if (= \< f)
+          (list 1 '(set! h (- h 1)))
+          (if (= \. f)
+            (list 1 '(IO.print &(str (Char.from-int @(Array.nth &t h)))))
+            (if (= \, f)
+              (list 1 '(Array.aset! &t h (Char.to-int (IO.get-char))))
+              (if (= \[ f)
+                (list (search-matching-bracket s 1)
+                  (list 'while '(/= &0 (Array.nth &t h))
+                    (cons 'do
+                      (let [subs (String.substring s i (String.length s))]
+                        (compile-compf subs subs 0)))))
+                '()))))))))
+
+(defndynamic compile-compf [p s i]
+  (if (= (String.length p) 0)
+    '()
+    (let [f (String.char-at p 0)]
+      (if (= \] f)
+        '()
+        (let [incr-c (compile-compf-char f s i)]
+          (let [incr (car incr-c)
+                compiled (cadr incr-c)]
+            (cons compiled
+                  (compile-compf (String.substring p incr (String.length p))
+                                 s
+                                 (+ incr 1)))))))))
+
+(defmacro compf [prog]
+  (list 'defn 'main []
+    (cons 'let-do
+      (cons (array 't '(Array.replicate 30000 &0)
+                   'h 0)
+        (compile-compf prog prog 0)))))
