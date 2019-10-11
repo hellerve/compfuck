@@ -1,8 +1,8 @@
 (defndynamic search-matching-bracket [s m]
   (if (Dynamic.or (= (String.length s) 0) (= m 0))
     0
-      (let [f (String.char-at s 0)]
-        (inc (search-matching-bracket (String.tail s) (if (= \] f) (dec m) m))))))
+    (let [f (String.char-at s 0)]
+      (inc (search-matching-bracket (String.tail s) (if (= \] f) (dec m) (if (= \[ f) (inc m) m)))))))
 
 (defndynamic compile-compf-char [c s i]
   (if (= \+ f)
@@ -18,30 +18,30 @@
             (if (= \, f)
               (list 1 '(Array.aset! &t h (Char.to-int (IO.get-char))))
               (if (= \[ f)
-                (list (search-matching-bracket s 1)
-                  (list 'while '(/= &0 (Array.nth &t h))
-                    (cons 'do
-                      (let [subs (String.suffix-string s i)]
-                        (compile-compf subs subs 0)))))
-                '()))))))))
+                (let [end (search-matching-bracket (String.suffix-string s (+ i 1)) 1)]
+                  (list (+ end 1)
+                    (list 'while '(/= &0 (Array.nth &t h))
+                      (cons 'do
+                        (let [subs (String.substring s (+ i 1) end)]
+                          (compile-compf subs 0))))))
+                '(1 ())))))))))
 
-(defndynamic compile-compf [p s i]
-  (if (= (String.length p) 0)
+(defndynamic compile-compf [p i]
+  (if (= i (String.length p))
     '()
-    (let [f (String.char-at p 0)]
+    (let [f (String.char-at p i)]
       (if (= \] f)
         '()
-        (let [incr-c (compile-compf-char f s i)]
+        (let [incr-c (compile-compf-char f p i)]
           (let [incr (car incr-c)
                 compiled (cadr incr-c)]
             (cons compiled
-                  (compile-compf (String.suffix-string p incr)
-                                 s
-                                 (+ incr 1)))))))))
+                  (compile-compf p
+                                 (+ i incr)))))))))
 
 (defmacro compf [prog]
   (list 'defn 'main []
     (cons 'let-do
       (cons (array 't '(Array.replicate 30000 &0)
                    'h 0)
-        (compile-compf prog prog 0)))))
+        (compile-compf prog 0)))))
