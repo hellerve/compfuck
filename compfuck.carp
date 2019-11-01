@@ -14,13 +14,13 @@
         (if (= \< f)
           (list 1 '(set! h (- h 1)))
           (if (= \. f)
-            (list 1 '(IO.print &(str (Char.from-int @(Array.nth &t h)))))
+            (list 1 '(IO.print &(str (Char.from-int @(Array.unsafe-nth &t h)))))
             (if (= \, f)
               (list 1 '(Array.aset! &t h (Char.to-int (IO.get-char))))
               (if (= \[ f)
                 (let [end (search-matching-bracket (String.suffix-string s (+ i 1)) 1)]
                   (list (+ end 1)
-                    (list 'while '(/= &0 (Array.nth &t h))
+                    (list 'while '(/= &0 (Array.unsafe-nth &t h))
                       (cons 'do
                         (let [subs (String.substring s (+ i 1) end)]
                           (compile-compf subs 0))))))
