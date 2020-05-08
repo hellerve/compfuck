@@ -1,5 +1,5 @@
 (defndynamic search-matching-bracket [s m]
-  (if (Dynamic.or (= (String.length s) 0) (= m 0))
+  (if (or (= (String.length s) 0) (= m 0))
     0
     (let [f (String.char-at s 0)]
       (inc (search-matching-bracket (String.tail s) (if (= \] f) (dec m) (if (= \[ f) (inc m) m)))))))
@@ -40,8 +40,9 @@
                                  (+ i incr)))))))))
 
 (defmacro compf [prog]
-  (list 'defn 'main []
-    (cons 'let-do
-      (cons (array 't '(Array.replicate 30000 &0)
-                   'h 0)
-        (compile-compf prog 0)))))
+  (eval
+    (list 'defn 'main []
+      (cons 'let-do
+        (cons (array 't '(Array.replicate 30000 &0)
+                     'h 0)
+          (compile-compf prog 0))))))
