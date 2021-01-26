@@ -5,26 +5,21 @@
       (inc (search-matching-bracket (String.tail s) (if (= \] f) (dec m) (if (= \[ f) (inc m) m)))))))
 
 (defndynamic compile-compf-char [c s i]
-  (if (= \+ f)
-    (list 1 '(Array.aupdate! &t h &(fn [x] (mod (Int.inc @x) 255))))
-    (if (= \- f)
-      (list 1 '(Array.aupdate! &t h &(fn [x] (max 0 (Int.dec @x)))))
-      (if (= \> f)
-        (list 1 '(set! h (+ h 1)))
-        (if (= \< f)
-          (list 1 '(set! h (- h 1)))
-          (if (= \. f)
-            (list 1 '(IO.print &(str (Char.from-int @(Array.unsafe-nth &t h)))))
-            (if (= \, f)
-              (list 1 '(Array.aset! &t h (Char.to-int (IO.get-char))))
-              (if (= \[ f)
-                (let [end (search-matching-bracket (String.suffix s (+ i 1)) 1)]
-                  (list (+ end 1)
-                    (list 'while '(/= &0 (Array.unsafe-nth &t h))
-                      (cons 'do
-                        (let [subs (String.slice s (+ i 1) end)]
-                          (compile-compf subs 0))))))
-                '(1 ())))))))))
+  (case f
+    \+ (list 1 '(Array.aupdate! &t h &(fn [x] (mod (Int.inc @x) 255))))
+    \- (list 1 '(Array.aupdate! &t h &(fn [x] (max 0 (Int.dec @x)))))
+    \> (list 1 '(set! h (+ h 1)))
+    \< (list 1 '(set! h (- h 1)))
+    \. (list 1 '(IO.print &(str (Char.from-int (copy (Array.unsafe-nth &t h))))))
+    \, (list 1 '(Array.aset! &t h (Char.to-int (IO.get-char))))
+    \[
+      (let [end (search-matching-bracket (String.suffix s (+ i 1)) 1)]
+        (list (+ end 1)
+          `(while (/= &0 (Array.unsafe-nth &t h))
+            (do
+              %@(let [subs (String.slice s (+ i 1) end)]
+                  (compile-compf subs 0))))))
+    '(1 ())))
 
 (defndynamic compile-compf [p i]
   (if (= i (String.length p))
@@ -41,8 +36,7 @@
 
 (defmacro compf [prog]
   (eval
-    (list 'defn 'main []
-      (cons 'let-do
-        (cons (array 't '(Array.replicate 30000 &0)
-                     'h 0)
-          (compile-compf prog 0))))))
+    `(defn main []
+      (let-do [t (Array.replicate 30000 &0)
+               h 0]
+        %@(compile-compf prog 0)))))
